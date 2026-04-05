@@ -16,7 +16,17 @@
   }
   html { scroll-behavior: smooth; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
-  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+  body::before { 
+    content: ''; 
+    position: fixed; 
+    inset: 0; 
+    background-image: 
+      radial-gradient(circle at 25% 50%, rgba(0,229,160,0.02) 1px, transparent 1px),
+      radial-gradient(circle at 75% 80%, rgba(0,229,160,0.02) 1px, transparent 1px);
+    background-size: 50px 50px, 80px 80px;
+    pointer-events: none; 
+    z-index: 0; 
+  }
   .app { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   .header { text-align: center; margin-bottom: 3rem; padding-top: 1rem; }
   .header-tag { display: inline-block; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(0,229,160,0.3); padding: 4px 14px; border-radius: 100px; margin-bottom: 1.2rem; }
@@ -24,7 +34,14 @@
   .header-sub { color: var(--text2); font-size: 15px; font-weight: 300; }
   .section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 1rem; }
   .files-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
-  @media (max-width: 640px) { .files-grid { grid-template-columns: 1fr; } }
+  
+  @media (max-width: 640px) { 
+    .files-grid { grid-template-columns: 1fr; }
+    .app { padding: 1rem; }
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .btn-row { flex-direction: column; }
+    .btn-download, .btn-reset { width: 100%; justify-content: center; }
+  }
 
   /* ── fade-out section (point 3) ── */
   .upload-section {
@@ -39,27 +56,116 @@
     pointer-events: none;
   }
 
-  .file-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-r); padding: 1rem 1.25rem; position: relative; overflow: hidden; transition: border-color 0.2s, background 0.2s; }
-  .file-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent-color, var(--accent)); opacity: 0; transition: opacity 0.2s; }
+  .file-card { 
+    background: var(--bg2); 
+    border: 1px solid var(--border); 
+    border-radius: var(--card-r); 
+    padding: 1rem 1.25rem; 
+    position: relative; 
+    overflow: hidden; 
+    transition: transform 0.2s ease, border-color 0.2s, box-shadow 0.2s;
+  }
+  .file-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  }
+  .file-card::before { 
+    content: ''; 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    height: 2px; 
+    background: var(--accent-color, var(--accent)); 
+    opacity: 0; 
+    transition: opacity 0.2s; 
+  }
   .file-card.loaded::before { opacity: 1; }
-  .file-card.loaded { border-color: var(--border2); background: var(--bg3); }
+  .file-card.loaded { 
+    border-color: var(--border2); 
+    background: var(--bg3);
+    animation: glowPulse 0.5s ease-out;
+    box-shadow: 0 0 0 1px rgba(0,229,160,0.3);
+  }
+  
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 0 0 rgba(0,229,160,0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(0,229,160,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,229,160,0); }
+  }
+  
   .file-card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
   .file-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
   .file-card-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; flex: 1; }
   .file-card-desc { font-size: 11px; color: var(--text3); margin-bottom: 10px; line-height: 1.5; }
-  .file-status { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .file-status.ok { color: var(--success); }
+  .file-status { 
+    font-family: 'DM Mono', monospace; 
+    font-size: 10px; 
+    color: var(--text3); 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    flex-wrap: wrap;
+    transition: all 0.3s ease;
+  }
+  .file-status.ok { 
+    color: var(--success);
+    animation: slideInRight 0.3s ease-out;
+  }
   .file-status.builtin { color: #a855f7; }
+  
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
   .file-input-hidden { display: none; }
-  .btn-upload { display: block; width: 100%; background: transparent; border: 1px dashed var(--border2); border-radius: 8px; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 6px 0; cursor: pointer; transition: all 0.2s; text-align: center; margin-top: 8px; }
+  
+  .btn-upload { 
+    display: block; 
+    width: 100%; 
+    background: transparent; 
+    border: 1px dashed var(--border2); 
+    border-radius: 8px; 
+    color: var(--text2); 
+    font-family: 'DM Sans', sans-serif; 
+    font-size: 12px; 
+    padding: 6px 0; 
+    cursor: pointer; 
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+    text-align: center; 
+    margin-top: 8px; 
+  }
   .btn-upload:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,0.04); }
+  .btn-upload:active { transform: scale(0.96); }
   .btn-upload.override { border-color: rgba(168,85,247,0.3); color: #a855f7; }
   .btn-upload.override:hover { border-color: #a855f7; background: rgba(168,85,247,0.06); }
 
   .run-area { text-align: center; margin: 2rem 0; }
-  .btn-run { display: inline-flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, var(--accent) 0%, #00b37d 100%); color: #001a0d; border: none; border-radius: 100px; padding: 14px 36px; cursor: pointer; transition: opacity 0.2s, transform 0.15s; }
-  .btn-run:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-run { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 10px; 
+    font-family: 'Syne', sans-serif; 
+    font-size: 15px; 
+    font-weight: 700; 
+    background: linear-gradient(135deg, var(--accent) 0%, #00b37d 100%); 
+    color: #001a0d; 
+    border: none; 
+    border-radius: 100px; 
+    padding: 14px 36px; 
+    cursor: pointer; 
+    transition: opacity 0.2s, transform 0.15s; 
+  }
+  .btn-run:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,229,160,0.3); }
   .btn-run:active { transform: scale(0.98); }
   .btn-run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .btn-run svg { width: 18px; height: 18px; }
@@ -91,10 +197,25 @@
   .metric-lbl { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: 'DM Mono', monospace; }
 
   .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 0.5rem; }
-  .btn-download { display: inline-flex; align-items: center; gap: 8px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 100px; padding: 10px 28px; cursor: pointer; transition: all 0.2s; }
-  .btn-download:hover { background: rgba(0,229,160,0.08); }
-  .btn-reset { display: inline-flex; align-items: center; gap: 8px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; background: transparent; border: 1px solid var(--border2); color: var(--text2); border-radius: 100px; padding: 10px 28px; cursor: pointer; transition: all 0.2s; }
-  .btn-reset:hover { border-color: var(--text2); color: var(--text); }
+  .btn-download, .btn-reset { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 8px; 
+    font-family: 'Syne', sans-serif; 
+    font-size: 14px; 
+    font-weight: 600; 
+    background: transparent; 
+    border-radius: 100px; 
+    padding: 10px 28px; 
+    cursor: pointer; 
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+  }
+  .btn-download { border: 1px solid var(--accent); color: var(--accent); }
+  .btn-download:hover { background: rgba(0,229,160,0.08); transform: translateY(-1px); }
+  .btn-download:active { transform: scale(0.96); }
+  .btn-reset { border: 1px solid var(--border2); color: var(--text2); }
+  .btn-reset:hover { border-color: var(--text2); color: var(--text); transform: translateY(-1px); }
+  .btn-reset:active { transform: scale(0.96); }
 
   .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
   .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 18px; font-size: 13px; color: var(--text); z-index: 9999; transform: translateY(20px); opacity: 0; transition: all 0.3s; max-width: 320px; }
@@ -106,60 +227,101 @@
   .master-loading { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner { width: 12px; height: 12px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  
+  /* Skeleton Loader */
+  .skeleton {
+    background: linear-gradient(90deg, var(--bg3) 25%, var(--bg2) 50%, var(--bg3) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+  }
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  /* Tooltip Styles */
+  .tooltip {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+  }
+  .tooltip:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg3);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+  }
+  
   /* Sticky Footer Styles */
   .sticky-footer {
-  position: relative;
-  background: transparent;
-  padding: 0.75rem 1rem;
-  transition: all 0.3s ease;
-  margin-top: 2rem;
-}
-
-.sticky-footer:hover {
-  background: rgba(17, 19, 24, 0.3);
-}
-
-.footer-content {
-  max-width: 960px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 12px;
-  letter-spacing: 0.3px;
-}
-
-.footer-icon {
-  color: var(--accent);
-  font-size: 14px;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-
-.footer-text {
-  color: var(--text2);
-  transition: color 0.3s ease;
-}
-
-.footer-text strong {
-  color: var(--accent);
-  font-weight: 700;
-  background: linear-gradient(135deg, #00e5a0 0%, #00b37d 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.sticky-footer:hover .footer-text {
-  color: var(--text);
-}
-
+    position: relative;
+    background: transparent;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    margin-top: 2rem;
+  }
+  .sticky-footer:hover {
+    background: rgba(17, 19, 24, 0.3);
+  }
+  .footer-content {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+  }
+  .footer-icon {
+    color: var(--accent);
+    font-size: 14px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+  .footer-text {
+    color: var(--text2);
+    transition: color 0.3s ease;
+  }
+  .footer-text strong {
+    color: var(--accent);
+    font-weight: 700;
+    background: linear-gradient(135deg, #00e5a0 0%, #00b37d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .sticky-footer:hover .footer-text {
+    color: var(--text);
+  }
+  
+  /* Shortcuts Hint (minimal) */
+  .shortcuts-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    font-size: 10px;
+    color: var(--text3);
+    background: rgba(0,0,0,0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 1000;
+  }
 </style>
 </head>
 <body>
@@ -174,7 +336,7 @@
     <p class="header-sub">Upload your data files and generate the consolidated inventory report in seconds.</p>
   </div>
 
-  <!-- ── UPLOAD SECTION (fades away on run) ── -->
+  // UPLOAD SECTION
   <div class="upload-section" id="upload-section">
 
     <div class="section-label">Required data files</div>
@@ -186,7 +348,9 @@
         </div>
         <div class="file-card-desc">GRNR invoices filtered by Type &amp; Status. Fills week-wise Out columns per brand.</div>
         <div class="file-status" id="status-sales"><span class="status-dot"></span> No file chosen</div>
-        <button class="btn-upload" onclick="document.getElementById('input-sales').click()">Choose file (.xlsx / .csv)</button>
+        <div class="tooltip" data-tip="Upload Excel or CSV files">
+          <button class="btn-upload" onclick="document.getElementById('input-sales').click()">Choose file (.xlsx / .csv)</button>
+        </div>
         <input type="file" id="input-sales" class="file-input-hidden" accept=".xlsx,.xls,.csv" onchange="handleFile('sales',this)">
       </div>
       <div class="file-card" id="card-return" style="--accent-color:#0070f3;">
@@ -196,7 +360,9 @@
         </div>
         <div class="file-card-desc">Returns with Dispatched/Processed status. Fills In Transit column.</div>
         <div class="file-status" id="status-return"><span class="status-dot"></span> No file chosen</div>
-        <button class="btn-upload" onclick="document.getElementById('input-return').click()">Choose file (.xlsx / .csv)</button>
+        <div class="tooltip" data-tip="Upload Excel or CSV files">
+          <button class="btn-upload" onclick="document.getElementById('input-return').click()">Choose file (.xlsx / .csv)</button>
+        </div>
         <input type="file" id="input-return" class="file-input-hidden" accept=".xlsx,.xls,.csv" onchange="handleFile('return',this)">
       </div>
       <div class="file-card" id="card-grn" style="--accent-color:#ff6b35;">
@@ -206,7 +372,9 @@
         </div>
         <div class="file-card-desc">Goods receipt notes by supplier. Fills week-wise In columns per brand.</div>
         <div class="file-status" id="status-grn"><span class="status-dot"></span> No file chosen</div>
-        <button class="btn-upload" onclick="document.getElementById('input-grn').click()">Choose file (.xlsx / .csv)</button>
+        <div class="tooltip" data-tip="Upload Excel or CSV files">
+          <button class="btn-upload" onclick="document.getElementById('input-grn').click()">Choose file (.xlsx / .csv)</button>
+        </div>
         <input type="file" id="input-grn" class="file-input-hidden" accept=".xlsx,.xls,.csv" onchange="handleFile('grn',this)">
       </div>
       <div class="file-card" id="card-stock" style="--accent-color:#a855f7;">
@@ -216,7 +384,9 @@
         </div>
         <div class="file-card-desc">Current stock by location. Fills Good/Defective inventory columns.</div>
         <div class="file-status" id="status-stock"><span class="status-dot"></span> No file chosen</div>
-        <button class="btn-upload" onclick="document.getElementById('input-stock').click()">Choose file (.xlsx / .csv)</button>
+        <div class="tooltip" data-tip="Upload Excel or CSV files">
+          <button class="btn-upload" onclick="document.getElementById('input-stock').click()">Choose file (.xlsx / .csv)</button>
+        </div>
         <input type="file" id="input-stock" class="file-input-hidden" accept=".xlsx,.xls,.csv" onchange="handleFile('stock',this)">
       </div>
     </div>
@@ -233,7 +403,9 @@
           <div class="file-card-desc">Partcode → Brand. Used in Sales Report.</div>
           <div class="file-status" id="status-partcode"><span class="status-dot"></span> <span id="label-partcode">Loading built-in...</span></div>
           <div class="master-loading" id="spinner-partcode"><div class="spinner"></div> Fetching from server...</div>
-          <button class="btn-upload override" onclick="document.getElementById('input-partcode').click()">Override with custom file</button>
+          <div class="tooltip" data-tip="Override default master file with custom data">
+            <button class="btn-upload override" onclick="document.getElementById('input-partcode').click()">Override with custom file</button>
+          </div>
           <input type="file" id="input-partcode" class="file-input-hidden" accept=".xlsx,.xls,.csv" onchange="handleFile('partcode',this)">
         </div>
         <div class="file-card" id="card-pricelist" style="--accent-color:#10b981;">
@@ -244,7 +416,9 @@
           <div class="file-card-desc">Part code → Brand Price &amp; Brand. Used for valuation.</div>
           <div class="file-status" id="status-pricelist"><span class="status-dot"></span> <span id="label-pricelist">Loading built-in...</span></div>
           <div class="master-loading" id="spinner-pricelist"><div class="spinner"></div> Fetching from server...</div>
-          <button class="btn-upload override" onclick="document.getElementById('input-pricelist').click()">Override with custom file</button>
+          <div class="tooltip" data-tip="Override default master file with custom data">
+            <button class="btn-upload override" onclick="document.getElementById('input-pricelist').click()">Override with custom file</button>
+          </div>
           <input type="file" id="input-pricelist" class="file-input-hidden" accept=".xlsx,.xls,.csv" onchange="handleFile('pricelist',this)">
         </div>
         <div class="file-card" id="card-supplier" style="--accent-color:#ec4899;">
@@ -255,7 +429,9 @@
           <div class="file-card-desc">Supplier Name → Brand Name. Used in GRN processing.</div>
           <div class="file-status" id="status-supplier"><span class="status-dot"></span> <span id="label-supplier">Loading built-in...</span></div>
           <div class="master-loading" id="spinner-supplier"><div class="spinner"></div> Fetching from server...</div>
-          <button class="btn-upload override" onclick="document.getElementById('input-supplier').click()">Override with custom file</button>
+          <div class="tooltip" data-tip="Override default master file with custom data">
+            <button class="btn-upload override" onclick="document.getElementById('input-supplier').click()">Override with custom file</button>
+          </div>
           <input type="file" id="input-supplier" class="file-input-hidden" accept=".xlsx,.xls,.csv" onchange="handleFile('supplier',this)">
         </div>
       </div>
@@ -303,25 +479,18 @@
     <span class="footer-text">Automation Engineered & Delivered By <strong>Harpinder Singh</strong></span>
   </div>
 </div>
-
+<div class="shortcuts-hint">Files auto-load on selection</div>
 <script>
-// ─────────────────────────────────────────────
+
 // STATE
-// ─────────────────────────────────────────────
 const fileData    = {};
 const REQUIRED    = ['sales','grn','stock'];
 const MONTHS      = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
 const BRANDS      = ['Philips','Reliance TV','Life long','AI+','pTron','Mobilla','AcWo','Pebble','Matrix','EVM','Honor','Boat','Harman','Samsung'];
 const logs        = [];
-let masterScrolled = false; // point 1: only scroll once
+let masterScrolled = false;
 
-// ─────────────────────────────────────────────
-// POINT 2: Load built-in master files from /masters/
-// Place these files in public/masters/ on Vercel:
-//   partcode_master.xlsx
-//   pricelist_master.xlsx
-//   supplier_mapping.xlsx
-// ─────────────────────────────────────────────
+// Load built-in master files from /masters/
 const MASTER_FILES = {
   partcode:  '/masters/partcode_master.xlsx',
   pricelist: '/masters/pricelist_master.xlsx',
@@ -361,9 +530,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadBuiltinMaster('supplier');
 });
 
-// ─────────────────────────────────────────────
 // FILE HANDLING
-// ─────────────────────────────────────────────
 function readWorkbook(file) {
   return new Promise((res,rej) => {
     const r = new FileReader();
@@ -388,16 +555,15 @@ async function handleFile(key, input) {
     document.getElementById('card-'+key).classList.add('loaded');
     const s = document.getElementById('status-'+key);
     s.className = 'file-status ok';
-    s.innerHTML = `<span class="status-dot"></span> ${file.name} — ${rows.length} rows`;
-
-    // Hide spinner for masters if user overrides
+    const fileSize = (file.size / 1024).toFixed(1);
+    s.innerHTML = `<span class="status-dot"></span> ${file.name} — ${rows.length} rows (${fileSize} KB)`;
     const sp = document.getElementById('spinner-'+key);
     if (sp) sp.style.display = 'none';
 
     showToast('Loaded: '+file.name,'ok');
     checkReady();
 
-    // POINT 1: Auto-scroll to master section the first time a required file is loaded
+    // Auto-scroll to master section the first time a required file is loaded
     if (REQUIRED.includes(key) && !masterScrolled) {
       masterScrolled = true;
       setTimeout(() => {
@@ -421,9 +587,7 @@ function showToast(msg, type='') {
   t._t = setTimeout(()=>t.classList.remove('show'), 3500);
 }
 
-// ─────────────────────────────────────────────
-// RESET (start over button)
-// ─────────────────────────────────────────────
+// (start over button)
 function resetApp() {
   // Clear user-uploaded data files (keep masters)
   ['sales','return','grn','stock'].forEach(k => {
@@ -447,9 +611,7 @@ function resetApp() {
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-// ─────────────────────────────────────────────
 // HELPERS
-// ─────────────────────────────────────────────
 function cleanNum(v) {
   if (v===null||v===undefined||v==='') return 0;
   const n = parseFloat(String(v).replace(/,/g,'').replace(/₹/g,'').replace(/\s/g,''));
@@ -497,9 +659,7 @@ function addLog(msg, type='') {
   la.scrollTop = la.scrollHeight;
 }
 
-// ─────────────────────────────────────────────
-// PROCESSORS (identical logic to app.py)
-// ─────────────────────────────────────────────
+// PROCESSORS
 function processSalesReport(rows, partcodeMaster) {
   const partBrandMap = createMapping(partcodeMaster,'Partcode','Brand');
   addLog(`Partcode master: ${Object.keys(partBrandMap).length} entries`);
@@ -601,9 +761,7 @@ function createInventoryReport(salesData, grnData, stockData, returnData) {
   });
 }
 
-// ─────────────────────────────────────────────
 // PROGRESS UI
-// ─────────────────────────────────────────────
 const STEPS = ['Loading master data','Processing Sales Report','Processing GRN Details','Processing Stock Details','Processing Sales Return','Building Inventory Table','Generating Excel file'];
 
 function renderSteps(states) {
@@ -611,18 +769,13 @@ function renderSteps(states) {
   document.getElementById('progress-steps').innerHTML=states.map(s=>`<div class="progress-step ${s.state||''}"><span class="step-icon">${icons[s.state||'pending']}</span>${s.label}</div>`).join('');
 }
 
-// ─────────────────────────────────────────────
 // MAIN RUN
-// ─────────────────────────────────────────────
 async function runAutomation() {
   logs.length=0;
   document.getElementById('log-area').innerHTML='';
   document.getElementById('log-area').classList.remove('visible');
   document.getElementById('btn-run').disabled=true;
-
-  // POINT 3: Fade out the upload section
   document.getElementById('upload-section').classList.add('hidden');
-
   document.getElementById('progress-area').classList.add('visible');
   document.getElementById('summary-area').classList.remove('visible');
 
