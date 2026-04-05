@@ -106,6 +106,60 @@
   .master-loading { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner { width: 12px; height: 12px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  /* Sticky Footer Styles */
+  .sticky-footer {
+  position: relative;
+  background: transparent;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+  margin-top: 2rem;
+}
+
+.sticky-footer:hover {
+  background: rgba(17, 19, 24, 0.3);
+}
+
+.footer-content {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.footer-icon {
+  color: var(--accent);
+  font-size: 14px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.footer-text {
+  color: var(--text2);
+  transition: color 0.3s ease;
+}
+
+.footer-text strong {
+  color: var(--accent);
+  font-weight: 700;
+  background: linear-gradient(135deg, #00e5a0 0%, #00b37d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sticky-footer:hover .footer-text {
+  color: var(--text);
+}
+
 </style>
 </head>
 <body>
@@ -242,6 +296,13 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- Sticky Footer -->
+<div class="sticky-footer">
+  <div class="footer-content">
+    <span class="footer-text">Automation Engineered & Delivered By <strong>Harpinder Singh</strong></span>
+  </div>
+</div>
 
 <script>
 // ─────────────────────────────────────────────
