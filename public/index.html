@@ -136,7 +136,7 @@
     /* GRID */
     .files-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1.5rem;
       margin-top: 0.5rem;
     }
@@ -148,6 +148,8 @@
       border: 1px solid #ece7dd;
       box-shadow: 0 2px 5px rgba(0,0,0,0.02);
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
     .file-card:hover {
       border-color: #d6cdb5;
@@ -201,6 +203,7 @@
       transition: 0.15s;
       text-align: center;
       letter-spacing: 0.3px;
+      margin-top: 0.5rem;
     }
     .btn-upload.override {
       background: transparent;
@@ -214,6 +217,26 @@
     .btn-upload:hover {
       background: #008cff;
       transform: translateY(-1px);
+    }
+    .btn-download-template {
+      background: transparent;
+      border: 1px solid #d4c9b6;
+      color: #5f6b5f;
+      font-size: 0.7rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 40px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .btn-download-template:hover {
+      background: #e9e2d4;
+      border-color: #b0a086;
+      color: #1e2f2b;
     }
     .master-loading {
       display: flex;
@@ -436,6 +459,12 @@
       animation: pulse 1s step-start infinite;
     }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+      flex-direction: column;
+    }
   </style>
 </head>
 <body>
@@ -464,25 +493,25 @@
     <div class="section">
       <div class="section-header">
         <div class="section-number">01</div>
-        <div class="section-title">Core data files</div>
+        <div class="section-title">Core Data Files</div>
         <div class="section-tagline">3 required to generate</div>
       </div>
       <div class="files-grid" id="requiredGrid"></div>
     </div>
 
-    <!-- Master files -->
+    <!-- Master files with template download buttons -->
     <div class="section">
       <div class="section-header">
         <div class="section-number">02</div>
-        <div class="section-title">Master references</div>
-        <div class="section-tagline">Built‑in active • override optional</div>
+        <div class="section-title">Master References</div>
+        <div class="section-tagline">Built‑in active • override optional • download template</div>
       </div>
       <div class="files-grid" id="masterGrid"></div>
     </div>
 
     <!-- Run zone -->
     <div class="run-zone">
-      <div class="run-note">Sales, GRN and Stock files are mandatory. Masters are pre‑loaded from server, but you can upload custom versions.</div>
+      <div class="run-note">Sales, GRN and Stock files are mandatory. Masters are pre‑loaded from server, but you can upload custom versions. <strong>Download a template first to see the exact format.</strong></div>
       <button class="btn-run" id="runBtn" disabled>GENERATE REPORT</button>
     </div>
   </div>
@@ -490,7 +519,7 @@
   <!-- Progress section (hidden initially) -->
   <div id="progressSection" style="display: none;">
     <div class="progress-panel">
-      <div class="progress-header"><span>🔄 PROCESSING STREAM</span> <span class="blink-cursor">_</span></div>
+      <div class="progress-header"><span>PROCESSING STREAM</span> <span class="blink-cursor">_</span></div>
       <div class="progress-bar-bg"><div class="progress-fill" id="progressFill"></div></div>
       <div class="steps-row" id="stepsContainer"></div>
       <div class="log-box" id="logBox"></div>
@@ -528,6 +557,56 @@
     pricelist: '/masters/pricelist_master.xlsx',
     supplier: '/masters/supplier_mapping.xlsx'
   };
+
+  // ======================= TEMPLATE DEFINITIONS =======================
+  // Template structures for master files (to help users understand required columns)
+  const MASTER_TEMPLATES = {
+    partcode: {
+      name: 'partcode_master_template.xlsx',
+      headers: ['Partcode', 'Brand', 'Description'],
+      sampleRows: [
+        ['PART-1001', 'Philips', 'LED Bulb 9W'],
+        ['PART-1002', 'Boat', 'Wireless Earbuds'],
+        ['PART-1003', 'Samsung', '32" Smart TV']
+      ]
+    },
+    pricelist: {
+      name: 'pricelist_master_template.xlsx',
+      headers: ['Part code', 'Brand', 'Brand Price', 'MRP'],
+      sampleRows: [
+        ['PART-1001', 'Philips', 189.50, 399],
+        ['PART-1002', 'Boat', 1299, 2499],
+        ['PART-1003', 'Samsung', 18999, 24999]
+      ]
+    },
+    supplier: {
+      name: 'supplier_mapping_template.xlsx',
+      headers: ['Supplier Name', 'Brand Name', 'Supplier Code'],
+      sampleRows: [
+        ['Philips India Ltd', 'Philips', 'SUP001'],
+        ['Boat Lifestyle', 'Boat', 'SUP002'],
+        ['Samsung Electronics', 'Samsung', 'SUP003']
+      ]
+    }
+  };
+
+  // Helper: download template excel file
+  function downloadMasterTemplate(masterKey) {
+    const template = MASTER_TEMPLATES[masterKey];
+    if (!template) return;
+    
+    // Create worksheet data: headers + sample rows
+    const sheetData = [template.headers, ...template.sampleRows];
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    // auto column width hint
+    ws['!cols'] = template.headers.map(() => ({wch: 18}));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    
+    // Export file
+    XLSX.writeFile(wb, template.name);
+    showToast(`Downloaded template: ${template.name}`, false);
+  }
 
   let currentWorkbook = null;
   let logs = [];
@@ -777,7 +856,6 @@
     currentWorkbook = wb;
     setStep(6,'done',100);
     await delay(200);
-    // summary metrics
     const totalIn = reportRows.reduce((s,r)=> s + cleanNum(r[2])+cleanNum(r[4])+cleanNum(r[6])+cleanNum(r[8]),0);
     const totalOut = reportRows.reduce((s,r)=> s + cleanNum(r[3])+cleanNum(r[5])+cleanNum(r[7])+cleanNum(r[9]),0);
     const totalInv = reportRows.reduce((s,r)=> s + cleanNum(r[17]),0);
@@ -796,7 +874,7 @@
 
   function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
-  // UI Builders
+  // UI Builders with template download buttons
   function buildFileCards() {
     const requiredConf = [
       {key:'sales', label:'Sales Report', desc:'GRNR invoices filtered by Type & Status. Fills week-wise Out columns.', optional:false},
@@ -805,8 +883,8 @@
       {key:'return', label:'Sales Return Report', desc:'Returns with Dispatched/Processed status. In Transit column.', optional:true}
     ];
     const masterConf = [
-      {key:'partcode', label:'Partcode Master', desc:'Partcode → Brand', endpoint:true},
-      {key:'pricelist', label:'Pricelist Master', desc:'Part code → Brand Price', endpoint:true},
+      {key:'partcode', label:'Partcode Master', desc:'Partcode → Brand mapping', endpoint:true},
+      {key:'pricelist', label:'Pricelist Master', desc:'Part code → Brand Price & Brand', endpoint:true},
       {key:'supplier', label:'Supplier Mapping', desc:'Supplier → Brand Name', endpoint:true}
     ];
     const requiredGrid = document.getElementById('requiredGrid');
@@ -826,10 +904,24 @@
         <div class="card-desc">${c.desc}</div>
         <div class="file-status" id="status-${c.key}">Loading built‑in...</div>
         <div class="master-loading" id="spinner-${c.key}" style="display:flex"><div class="spinner"></div> fetching</div>
-        <button class="btn-upload override" onclick="document.getElementById('input-${c.key}').click()">⬆ Override built‑in</button>
-        <input type="file" id="input-${c.key}" style="display:none" accept=".xlsx,.xls,.csv" onchange="handleFileUpload('${c.key}',this)">
+        <div class="card-actions">
+          <button class="btn-download-template" data-master-key="${c.key}">Download Template (XLSX)</button>
+          <button class="btn-upload override" onclick="document.getElementById('input-${c.key}').click()">⬆ Override built‑in</button>
+          <input type="file" id="input-${c.key}" style="display:none" accept=".xlsx,.xls,.csv" onchange="handleFileUpload('${c.key}',this)">
+        </div>
       </div>
     `).join('');
+    // Attach template download listeners
+    document.querySelectorAll('.btn-download-template').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const masterKey = btn.getAttribute('data-master-key');
+        if (masterKey && MASTER_TEMPLATES[masterKey]) {
+          downloadMasterTemplate(masterKey);
+        } else {
+          showToast('Template not available', true);
+        }
+      });
+    });
     masterConf.forEach(c => loadBuiltinMaster(c.key, c.label));
   }
 
