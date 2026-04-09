@@ -6,7 +6,8 @@
   <title>Send ASC Inventory Mails | RV Solutions</title>
   <link rel="icon" type="image/png" href="/public/logo.png">
   <link rel="apple-touch-icon" href="/public/logo.png">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- xlsx-js-style: free fork of SheetJS that supports cellStyles (fill, font, border, numFmt) -->
+  <script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -862,7 +863,7 @@ function processFile() {
       return out;
     }
 
-    // --- Summary sheet: copy the full master Summary sheet, then blank out excluded cols ---
+    // --- Summary sheet: copy header + this ASC's row, SKIPPING excluded columns entirely ---
     const EXCLUDE_COLS = new Set([
       'ASM', 'ASC Mail ID', 'CC Mail ID 1', 'CC Mail ID 2',
       'CC Mail ID 3', 'CC Mail ID 4', 'CC Mail ID 5', 'ASM Mail ID'
@@ -870,37 +871,38 @@ function processFile() {
     const masterSumWs = masterWb.Sheets['Summary'];
     const masterSumRows = XLSX.utils.sheet_to_json(masterSumWs, { header:1, defval:'' });
     const headerRow = masterSumRows[0] || [];
-    // Find the row index in the sheet that matches this ASC
     const sumRange = XLSX.utils.decode_range(masterSumWs['!ref'] || 'A1');
-    // Build a mini sheet: header row + this ASC's row, preserving styles
     const ascRowIdx = summaryRows.indexOf(row); // 0-based among data rows
     const ascSheetRow = ascRowIdx + 1 + sumRange.s.r; // +1 for header, offset by sheet start
 
-    const sumOut = {};
-    // Copy header row
-    for (let C = sumRange.s.c; C <= sumRange.e.c; C++) {
-      const srcA = XLSX.utils.encode_cell({ r: sumRange.s.r, c: C });
-      const dstA = XLSX.utils.encode_cell({ r: 0, c: C - sumRange.s.c });
-      if (masterSumWs[srcA]) sumOut[dstA] = Object.assign({}, masterSumWs[srcA]);
-    }
-    // Copy this ASC's data row
+    // Build list of source column indices we want to KEEP (skipping EXCLUDE_COLS)
+    const keepCols = [];
     for (let C = sumRange.s.c; C <= sumRange.e.c; C++) {
       const colName = headerRow[C - sumRange.s.c];
-      const srcA = XLSX.utils.encode_cell({ r: ascSheetRow, c: C });
-      const dstA = XLSX.utils.encode_cell({ r: 1, c: C - sumRange.s.c });
-      if (EXCLUDE_COLS.has(colName)) {
-        // Keep style but blank value
-        if (masterSumWs[srcA]) {
-          const cell = Object.assign({}, masterSumWs[srcA]);
-          cell.v = ''; cell.w = ''; cell.t = 's';
-          sumOut[dstA] = cell;
-        }
-      } else {
-        if (masterSumWs[srcA]) sumOut[dstA] = Object.assign({}, masterSumWs[srcA]);
-      }
+      if (!EXCLUDE_COLS.has(colName)) keepCols.push(C);
     }
-    sumOut['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:1, c:sumRange.e.c - sumRange.s.c} });
-    if (masterSumWs['!cols']) sumOut['!cols'] = JSON.parse(JSON.stringify(masterSumWs['!cols']));
+
+    const sumOut = {};
+    // Copy header row — only kept columns, packed into consecutive dest columns
+    keepCols.forEach((srcC, destC) => {
+      const srcA = XLSX.utils.encode_cell({ r: sumRange.s.r, c: srcC });
+      const dstA = XLSX.utils.encode_cell({ r: 0, c: destC });
+      if (masterSumWs[srcA]) sumOut[dstA] = Object.assign({}, masterSumWs[srcA]);
+    });
+    // Copy this ASC's data row — same kept columns
+    keepCols.forEach((srcC, destC) => {
+      const srcA = XLSX.utils.encode_cell({ r: ascSheetRow, c: srcC });
+      const dstA = XLSX.utils.encode_cell({ r: 1, c: destC });
+      if (masterSumWs[srcA]) sumOut[dstA] = Object.assign({}, masterSumWs[srcA]);
+    });
+    sumOut['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:1, c:keepCols.length - 1} });
+    // Keep col widths only for kept columns
+    if (masterSumWs['!cols']) {
+      sumOut['!cols'] = keepCols.map(srcC => {
+        const orig = masterSumWs['!cols'][srcC - sumRange.s.c];
+        return orig ? JSON.parse(JSON.stringify(orig)) : {};
+      });
+    }
     if (masterSumWs['!rows']) sumOut['!rows'] = JSON.parse(JSON.stringify(masterSumWs['!rows']));
     XLSX.utils.book_append_sheet(ascWb, sumOut, 'Summary');
 
@@ -954,7 +956,7 @@ function processFile() {
         return `<tr><td style="padding:6px 12px;border:1px solid #d6cdb5;font-weight:600;background:#f4f2ec;color:#3e4d44;font-size:13px;white-space:nowrap">${k}</td><td style="padding:6px 12px;border:1px solid #d6cdb5;color:#1a1e2b;font-size:13px">${val}</td></tr>`;
       }).join('');
     const summaryTableHtml = `
-<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16px 0;font-family:Arial,sans-serif;min-width:340px;max-width:520px">
+<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16px 0;font-family:Arial,sans-serif;width:100%;max-width:600px">
   <thead>
     <tr><th colspan="2" style="padding:8px 12px;background:#1e2f2b;color:#fae669;font-size:13px;text-align:left;border:1px solid #1e2f2b;letter-spacing:0.3px">Stock Summary — ${ascName}</th></tr>
   </thead>
@@ -1114,7 +1116,7 @@ This communication is confidential and intended solely for the named recipient(s
 function buildMailBodyHtml(asc) {
   const p = (t) => `<p style="margin:0 0 14px 0;font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b;line-height:1.65">${t}</p>`;
   return `
-<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b;max-width:680px">
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b;width:100%">
   ${p(`Dear <strong>${asc.ascName}</strong>,`)}
   ${p('We hope you are doing well.')}
   ${p(`This is a gentle reminder to review your available stock (as per attached sheet) and arrange the dispatch of all pending items to the RV Warehouse by <strong>${asc.mailDate}</strong>. We kindly request that all materials are sent in complete and good condition to avoid any issues upon receipt.`)}
@@ -1127,7 +1129,7 @@ function buildMailBodyHtml(asc) {
   <p style="margin:16px 0 4px 0;font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b">Thanks,</p>
   <p style="margin:0 0 4px 0;font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b"><strong>Central Warehouse Team</strong></p>
   <p style="margin:0 0 20px 0;font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b">RV Solutions</p>
-  <div style="margin-top:20px;padding:10px 14px;background:#f4f2ec;border-left:3px solid #e5b13b;border-radius:4px;font-size:11px;color:#6b7c70;font-family:Arial,sans-serif">
+  <div style="margin-top:20px;padding:10px 14px;background:#f4f2ec; solid #e5b13b;border-radius:4px;font-size:11px;color:#6b7c70;font-family:Arial,sans-serif">
     This is an automated system-generated mail. Please do not reply to this message.<br>
     For any queries, please contact your designated RV Solutions representative.<br>
     This communication is confidential and intended solely for the named recipient(s).
