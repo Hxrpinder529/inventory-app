@@ -826,35 +826,37 @@ function processFile() {
       return out;
     }
 
-    // Helper: filter a styled sheet to keep only rows whose col-A value is in a Set
-    // (used for Stock_Raw Data / STN_Raw Data — we rebuild row-by-row from the master sheet)
-    function filterStyledSheet(masterWs, matchSet, keyColLetter) {
+    // Helper: filter a styled sheet keeping only header row + rows where keyColIdx matches matchSet
+    // Dest sheet always starts at A1 (col 0, row 0) regardless of source sheet origin
+    function filterStyledSheet(masterWs, matchSet, keyColIdx) {
       if (!masterWs) return XLSX.utils.aoa_to_sheet([[]]);
       const ref = masterWs['!ref'];
       if (!ref) return XLSX.utils.aoa_to_sheet([[]]);
       const range = XLSX.utils.decode_range(ref);
+      const numCols = range.e.c - range.s.c + 1;
       const out = {};
       let destRow = 0;
 
-      // First pass: collect header row (row 0) and matching data rows
-      const rowsToCopy = [0]; // always keep header
+      // Collect: header row + matching data rows (src row indices)
+      const rowsToCopy = [range.s.r]; // header
       for (let R = range.s.r + 1; R <= range.e.r; R++) {
-        const keyCell = masterWs[XLSX.utils.encode_cell({ r: R, c: keyColLetter })];
+        const keyCell = masterWs[XLSX.utils.encode_cell({ r: R, c: range.s.c + keyColIdx })];
         const val = keyCell ? String(keyCell.v || '').trim() : '';
         if (matchSet.has(val)) rowsToCopy.push(R);
       }
 
+      // Copy rows; dest always starts at col 0, row 0
       rowsToCopy.forEach(srcRow => {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const srcAddr = XLSX.utils.encode_cell({ r: srcRow, c: C });
-          const destAddr = XLSX.utils.encode_cell({ r: destRow, c: C });
+        for (let ci = 0; ci < numCols; ci++) {
+          const srcAddr  = XLSX.utils.encode_cell({ r: srcRow,  c: range.s.c + ci });
+          const destAddr = XLSX.utils.encode_cell({ r: destRow, c: ci });
           if (masterWs[srcAddr]) out[destAddr] = Object.assign({}, masterWs[srcAddr]);
         }
         destRow++;
       });
 
       if (destRow === 0) return XLSX.utils.aoa_to_sheet([[]]);
-      out['!ref'] = XLSX.utils.encode_range({ s:{ r:0, c:range.s.c }, e:{ r:destRow-1, c:range.e.c } });
+      out['!ref'] = XLSX.utils.encode_range({ s:{ r:0, c:0 }, e:{ r:destRow-1, c:numCols-1 } });
       if (masterWs['!cols']) out['!cols'] = JSON.parse(JSON.stringify(masterWs['!cols']));
       if (masterWs['!rows']) out['!rows'] = JSON.parse(JSON.stringify(masterWs['!rows']));
       return out;
@@ -923,8 +925,22 @@ function processFile() {
     const safeName = ascName.replace(/[/\\:*?"<>|]/g,'_');
     const attachName = `${safeName}_InventoryAsOn_${fmtDate(mailDate)}.xlsx`;
 
-    // Base64 of workbook
-    const wbBin = XLSX.write(ascWb, { bookType:'xlsx', type:'base64', cellStyles:true });
+    // Base64 of workbook — wrap in try/catch so style errors don't silently break processing
+    let wbBin;
+    try {
+      wbBin = XLSX.write(ascWb, { bookType:'xlsx', type:'base64', cellStyles:true });
+    } catch(styleErr) {
+      console.warn('[asc-mail] cellStyles write failed, retrying without styles:', styleErr.message);
+      // Fallback: rebuild without styles to guarantee a valid xlsx
+      const fbWb = XLSX.utils.book_new();
+      const cleanSumRow = Object.fromEntries(Object.entries(row).filter(([k]) => !EXCLUDE_COLS.has(k)));
+      XLSX.utils.book_append_sheet(fbWb, XLSX.utils.json_to_sheet([cleanSumRow]), 'Summary');
+      const fbStock = ascStockRows.length ? XLSX.utils.json_to_sheet(ascStockRows) : XLSX.utils.aoa_to_sheet([Object.keys(stockRows[0]||{})]);
+      XLSX.utils.book_append_sheet(fbWb, fbStock, 'Stock_Raw Data');
+      const fbStn = ascStnRows.length ? XLSX.utils.json_to_sheet(ascStnRows) : XLSX.utils.aoa_to_sheet([Object.keys(stnRows[0]||{})]);
+      XLSX.utils.book_append_sheet(fbWb, fbStn, 'STN_Raw Data');
+      wbBin = XLSX.write(fbWb, { bookType:'xlsx', type:'base64' });
+    }
 
     // Build summary table HTML for mail body
     const TABLE_EXCLUDE = new Set([
@@ -940,7 +956,7 @@ function processFile() {
     const summaryTableHtml = `
 <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16px 0;font-family:Arial,sans-serif;min-width:340px;max-width:520px">
   <thead>
-    <tr><th colspan="2" style="padding:8px 12px;background:#1e2f2b;color:#fae669;font-size:13px;text-align:left;border:1px solid #1e2f2b;letter-spacing:0.3px">Stock Summary - ${ascName}</th></tr>
+    <tr><th colspan="2" style="padding:8px 12px;background:#1e2f2b;color:#fae669;font-size:13px;text-align:left;border:1px solid #1e2f2b;letter-spacing:0.3px">Stock Summary — ${ascName}</th></tr>
   </thead>
   <tbody>${summaryTableRows}</tbody>
 </table>`;
@@ -1204,7 +1220,9 @@ async function dispatchMail(asc) {
     });
     const data = await res.json();
     if (res.ok && data.ok) return true;
-    showToast(`${asc.ascName}: ${data.error||'Send failed'}`, true);
+    const errMsg = data.error || `HTTP ${res.status}`;
+    console.error('[dispatchMail] 400/500 detail:', errMsg, '| ASC:', asc.ascName, '| toEmail:', asc.toEmail, '| attachBase64 length:', asc.attachBase64?.length);
+    showToast(`${asc.ascName}: ${errMsg}`, true);
     return false;
   } catch(e) {
     showToast(`${asc.ascName}: Network error`, true);
