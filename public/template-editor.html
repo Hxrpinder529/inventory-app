@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Template Editor | RV Solutions</title>
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #fefaf0;
+      font-family: 'Inter', sans-serif;
+      color: #1a1e2b;
+      padding: 2rem 1.5rem;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    .header {
+      padding: 2rem 2.5rem;
+      background: #fff;
+      border-bottom: 1px solid #e9e6df;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .header h1 span { color: #0059ff; }
+    .back-link {
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #5b6e6b;
+      background: #f0f2f5;
+      padding: 0.5rem 1rem;
+      border-radius: 60px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .back-link:hover { background: #e2ddd4; }
+    .main-content {
+      display: flex;
+      height: calc(100vh - 200px);
+      min-height: 600px;
+    }
+    .sidebar {
+      width: 320px;
+      border-right: 1px solid #e9e6df;
+      background: #fefcf8;
+      display: flex;
+      flex-direction: column;
+    }
+    .template-list-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e9e6df;
+    }
+    .btn-new {
+      width: 100%;
+      background: #e5b13b;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.15s;
+    }
+    .btn-new:hover { background: #0059ff; color: #fff; }
+    .template-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+    .template-item {
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+    .template-item:hover {
+      background: #fefaf0;
+      border-color: #e5b13b;
+    }
+    .template-item.active {
+      background: #fef5e7;
+      border-color: #e5b13b;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .template-name {
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .template-badge {
+      font-size: 0.65rem;
+      background: #e5b13b;
+      padding: 0.2rem 0.5rem;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .template-date {
+      font-size: 0.7rem;
+      color: #8c9a91;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .editor-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .editor-toolbar {
+      padding: 1rem 1.5rem;
+      background: #fefcf8;
+      border-bottom: 1px solid #e9e6df;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .variable-badge {
+      background: #f0f2f5;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .variable-badge:hover {
+      background: #e5b13b;
+      color: #1a1e2b;
+    }
+    .editor-form {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1.5px solid #e2ddd4;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+    }
+    .form-group input[type="text"]:focus {
+      outline: none;
+      border-color: #e5b13b;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .checkbox-group input {
+      width: auto;
+    }
+    #htmlEditor {
+      height: 300px;
+      margin-bottom: 1rem;
+    }
+    .editor-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e9e6df;
+    }
+    .btn-save, .btn-delete, .btn-preview {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s;
+    }
+    .btn-save {
+      background: #e5b13b;
+      color: #1a1e2b;
+    }
+    .btn-save:hover { background: #0059ff; color: #fff; }
+    .btn-delete {
+      background: #fff;
+      border: 1.5px solid #c94f31;
+      color: #c94f31;
+    }
+    .btn-delete:hover { background: #c94f31; color: #fff; }
+    .btn-preview {
+      background: #1e2f2b;
+      color: #fae669;
+    }
+    .btn-preview:hover { background: #0059ff; color: #fff; }
+    .variables-info {
+      padding: 0.75rem 1.5rem;
+      background: #fef5e7;
+      border-top: 1px solid #e9e6df;
+      font-size: 0.75rem;
+      color: #5b6e6b;
+    }
+    .toast-msg {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e2f2b;
+      color: #fae669;
+      padding: 0.6rem 1.4rem;
+      border-radius: 60px;
+      font-size: 0.8rem;
+      z-index: 1200;
+      opacity: 0;
+      transition: 0.2s;
+      pointer-events: none;
+    }
+    .toast-msg.show { opacity: 1; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Email Template <span>Editor</span></h1>
+    <a class="back-link" href="/asc-mail">← Back to Mail Sender</a>
+  </div>
+  
+  <div class="main-content">
+    <div class="sidebar">
+      <div class="template-list-header">
+        <button class="btn-new" onclick="createNewTemplate()">+ New Template</button>
+      </div>
+      <div class="template-list" id="templateList"></div>
+    </div>
+    
+    <div class="editor-area">
+      <div class="editor-toolbar">
+        <span style="font-size:0.75rem;font-weight:600;margin-right:0.5rem;">Variables:</span>
+        <div class="variable-badge" onclick="insertVariable('{{ascName}}')">{{ascName}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{mailDate}}')">{{mailDate}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{deadlineDate}}')">{{deadlineDate}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{summaryTableHtml}}')">{{summaryTableHtml}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{stkQty}}')">{{stkQty}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{stnQty}}')">{{stnQty}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{totalVal}}')">{{totalVal}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{asm}}')">{{asm}}</div>
+        <div class="variable-badge" onclick="insertVariable('{{toEmail}}')">{{toEmail}}</div>
+      </div>
+      
+      <div class="editor-form">
+        <div class="form-group">
+          <label>Template Name</label>
+          <input type="text" id="templateName" placeholder="e.g., Standard Reminder, Urgent Dispatch...">
+        </div>
+        
+        <div class="form-group">
+          <label>Email Subject</label>
+          <input type="text" id="subjectTemplate" placeholder="Urgent: Dispatch of Pending Stock to RV Warehouse | {{ascName}}">
+        </div>
+        
+        <div class="form-group">
+          <label>Email Body (HTML)</label>
+          <div id="htmlEditor"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-group">
+            <input type="checkbox" id="isDefault"> Set as default template
+          </label>
+        </div>
+        
+        <div class="editor-actions">
+          <button class="btn-save" onclick="saveTemplate()">💾 Save Template</button>
+          <button class="btn-preview" onclick="previewTemplate()">👁 Preview</button>
+          <button class="btn-delete" id="deleteBtn" onclick="deleteTemplate()" style="display:none;">🗑 Delete</button>
+        </div>
+      </div>
+      
+      <div class="variables-info">
+        💡 Available variables: {{ascName}}, {{mailDate}}, {{deadlineDate}}, {{summaryTableHtml}}, {{stkQty}}, {{stnQty}}, {{totalVal}}, {{asm}}, {{toEmail}}
+        <br>📝 Use these variables in your template - they will be replaced with actual data when sending emails.
+      </div>
+    </div>
+  </div>
+</div>
+<div id="globalToast" class="toast-msg"></div>
+
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script>
+  let quill;
+  let currentTemplateId = null;
+  let templates = [];
+  
+  // Initialize Quill editor
+  quill = new Quill('#htmlEditor', {
+    theme: 'snow',
+    placeholder: 'Write your email template here... Use the variables above to insert dynamic content. You can format text, add tables, lists, and more!',
+    modules: {
+      toolbar: [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote', 'code-block'],
+        [{ 'header': 1 }, { 'header': 2 }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'script': 'sub'}, { 'script': 'super' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'font': [] }],
+        [{ 'align': [] }],
+        ['clean']
+      ]
+    }
+  });
+  
+  function showToast(msg, isErr = false) {
+    const toast = document.getElementById('globalToast');
+    toast.textContent = msg;
+    toast.style.background = isErr ? '#c94f31' : '#1e2f2b';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+  
+  async function loadTemplates() {
+    try {
+      const res = await fetch('/api/templates');
+      templates = await res.json();
+      renderTemplateList();
+    } catch (err) {
+      console.error('Failed to load templates:', err);
+      showToast('Failed to load templates', true);
+    }
+  }
+  
+  function renderTemplateList() {
+    const container = document.getElementById('templateList');
+    if (!container) return;
+    
+    if (templates.length === 0) {
+      container.innerHTML = '<div style="padding:1rem;text-align:center;color:#8c9a91;">No templates yet. Click "New Template" to create one.</div>';
+      return;
+    }
+    
+    container.innerHTML = templates.map(tpl => `
+      <div class="template-item ${currentTemplateId === tpl.id ? 'active' : ''}" onclick="loadTemplate('${tpl.id}')">
+        <div class="template-name">
+          ${escapeHtml(tpl.name)}
+          ${tpl.isDefault ? '<span class="template-badge">Default</span>' : ''}
+        </div>
+        <div class="template-date">Updated: ${new Date(tpl.updatedAt).toLocaleDateString()}</div>
+      </div>
+    `).join('');
+  }
+  
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  async function loadTemplate(id) {
+    try {
+      const res = await fetch(`/api/templates?id=${id}`);
+      if (!res.ok) throw new Error('Failed to load');
+      const tpl = await res.json();
+      currentTemplateId = tpl.id;
+      document.getElementById('templateName').value = tpl.name;
+      document.getElementById('subjectTemplate').value = tpl.subjectTemplate;
+      document.getElementById('isDefault').checked = tpl.isDefault;
+      quill.root.innerHTML = tpl.htmlBodyTemplate;
+      document.getElementById('deleteBtn').style.display = 'block';
+      renderTemplateList();
+      showToast(`Loaded template: ${tpl.name}`);
+    } catch (err) {
+      console.error('Failed to load template:', err);
+      showToast('Failed to load template', true);
+    }
+  }
+  
+  function insertVariable(variable) {
+    const range = quill.getSelection();
+    if (range) {
+      quill.insertText(range.index, variable);
+      quill.setSelection(range.index + variable.length, 0);
+    } else {
+      quill.insertText(quill.getLength(), variable);
+    }
+  }
+  
+  async function saveTemplate() {
+    const name = document.getElementById('templateName').value.trim();
+    const subjectTemplate = document.getElementById('subjectTemplate').value.trim();
+    const htmlBodyTemplate = quill.root.innerHTML;
+    const isDefault = document.getElementById('isDefault').checked;
+    
+    if (!name) {
+      showToast('Please enter a template name', true);
+      return;
+    }
+    if (!subjectTemplate) {
+      showToast('Please enter a subject template', true);
+      return;
+    }
+    if (!htmlBodyTemplate || htmlBodyTemplate === '<p><br></p>') {
+      showToast('Please enter email body content', true);
+      return;
+    }
+    
+    const textBodyTemplate = htmlBodyTemplate.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    
+    const payload = { name, subjectTemplate, htmlBodyTemplate, textBodyTemplate, isDefault };
+    
+    try {
+      let res;
+      if (currentTemplateId) {
+        res = await fetch(`/api/templates?id=${currentTemplateId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+      
+      if (res.ok) {
+        const saved = await res.json();
+        showToast(currentTemplateId ? 'Template updated!' : 'Template created!');
+        await loadTemplates();
+        if (!currentTemplateId) {
+          loadTemplate(saved.id);
+        } else {
+          renderTemplateList();
+        }
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to save template', true);
+      }
+    } catch (err) {
+      console.error('Save error:', err);
+      showToast('Network error', true);
+    }
+  }
+  
+  async function deleteTemplate() {
+    if (!currentTemplateId) return;
+    const template = templates.find(t => t.id === currentTemplateId);
+    if (template?.isDefault) {
+      showToast('Cannot delete the default template', true);
+      return;
+    }
+    if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) return;
+    
+    try {
+      const res = await fetch(`/api/templates?id=${currentTemplateId}`, {
+        method: 'DELETE'
+      });
+      
+      if (res.ok) {
+        showToast('Template deleted');
+        currentTemplateId = null;
+        document.getElementById('templateName').value = '';
+        document.getElementById('subjectTemplate').value = '';
+        document.getElementById('isDefault').checked = false;
+        quill.root.innerHTML = '';
+        document.getElementById('deleteBtn').style.display = 'none';
+        await loadTemplates();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to delete template', true);
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      showToast('Network error', true);
+    }
+  }
+  
+  function createNewTemplate() {
+    currentTemplateId = null;
+    document.getElementById('templateName').value = '';
+    document.getElementById('subjectTemplate').value = '';
+    document.getElementById('isDefault').checked = false;
+    quill.root.innerHTML = '';
+    document.getElementById('deleteBtn').style.display = 'none';
+    renderTemplateList();
+    showToast('Creating new template...');
+  }
+  
+  function previewTemplate() {
+    const subject = document.getElementById('subjectTemplate').value;
+    const html = quill.root.innerHTML;
+    
+    const win = window.open('', '_blank', 'width=900,height=700');
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Template Preview</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background: #fefaf0;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .preview-header {
+            background: #1e2f2b;
+            color: #fae669;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+          }
+          .preview-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          }
+          .variable-sample {
+            background: #f0f2f5;
+            padding: 0.5rem;
+            margin-top: 1rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #666;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="preview-header">
+          <strong>Subject:</strong> ${escapeHtml(subject)}
+        </div>
+        <div class="preview-content">
+          ${html}
+        </div>
+        <div class="variable-sample">
+          💡 Variables in this template will be replaced with actual data:<br>
+          {{ascName}} → "ABC Service Center"<br>
+          {{mailDate}} → "15-Apr-2026"<br>
+          {{deadlineDate}} → "21-Apr-2026"<br>
+          {{stkQty}} → "150"<br>
+          {{stnQty}} → "25"
+        </div>
+      </body>
+      </html>
+    `);
+  }
+  
+  // Load templates on page load
+  loadTemplates();
+</script>
+</body>
+</html>

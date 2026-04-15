@@ -7,7 +7,9 @@
   "routes": [
     { "src": "/api/auth",          "dest": "/api/auth.js" },
     { "src": "/api/send-asc-mail", "dest": "/api/send-asc-mail.js" },
+    { "src": "/api/templates",     "dest": "/api/templates.js" },
     { "src": "/login",             "dest": "/public/login.html" },
+    { "src": "/template-editor",   "dest": "/public/template-editor.html" },
     { "src": "/",                  "dest": "/api/protect.js" },
     { "src": "/asc-mail",          "dest": "/api/protect.js" },
     { "src": "/weekly-report",     "dest": "/api/protect.js" },

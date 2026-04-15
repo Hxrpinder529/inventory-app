@@ -14,6 +14,10 @@ Desktop.ini
 *.stackdump
 *.pdf
 
+# Template data
+/data/
+/tmp/
+
 # Dependency directories
 node_modules/
 vendor/
@@ -72,3 +76,5 @@ coverage/
 *.tmp
 *.temp
 .cache/
+.vercel
+.env*.local

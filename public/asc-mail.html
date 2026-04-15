@@ -6,7 +6,6 @@
   <title>Send ASC Inventory Mails | RV Solutions</title>
   <link rel="icon" type="image/png" href="/public/logo.png">
   <link rel="apple-touch-icon" href="/public/logo.png">
-  <!-- xlsx-js-style: free fork of SheetJS that supports cellStyles (fill, font, border, numFmt) -->
   <script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -29,7 +28,7 @@
       overflow:hidden;
     }
 
-    /* ── HEADER ── */
+    /* Page header - because i wanted logo and back button */
     .hero {
       padding:2rem 2.5rem 1.8rem;
       background:#fff;
@@ -74,7 +73,7 @@
       margin-top:0.5rem;
     }
 
-    /* ── SECTION SHELL ── */
+    /* reusable section styling - works for all 3 steps */
     .section {
       padding:1.5rem 2.5rem 2rem;
       border-bottom:1px solid #edeae2;
@@ -110,7 +109,7 @@
       border-radius:30px;
     }
 
-    /* ── SETTINGS PANEL ── */
+    /* SMTP form, creds saved to sessionStorage */
     .settings-grid {
       display:grid;
       grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -176,7 +175,7 @@
       flex-shrink:0;
     }
 
-    /* ── UPLOAD ZONE ── */
+    /* file upload - requires 3 specific sheets */
     .upload-zone {
       border:2px dashed #d6cdb5;
       border-radius:1.25rem;
@@ -215,7 +214,7 @@
     }
     .config-row .field-group { flex:1; min-width:160px; }
 
-    /* ── PROCESS BTN ── */
+    /* process button -disabled until file + SMTP are ready */
     .process-zone {
       padding:1rem 2.5rem 1.5rem;
       background:#faf7f0;
@@ -245,7 +244,7 @@
     .btn-process:disabled { opacity:0.4; cursor:not-allowed; background:#cdc6b8; }
     .btn-process:not(:disabled):hover { background:#0059ff; color:#fff; }
 
-    /* ── PREVIEW TABLE ── */
+    /* preview table -shows all ASCs before sending */
     .preview-section { padding:1.5rem 2.5rem 2rem; border-bottom:1px solid #edeae2; }
     .preview-summary-row {
       display:flex;
@@ -351,7 +350,7 @@
     .row-action-btn.skip-btn:hover { background:#fde8e8; }
     .row-action-btn.skipped { background:#f4f2ec; border-color:#ccc; color:#999; cursor:default; }
 
-    /* SEND ALL BAR */
+    /* bulk send with progress bar, 300ms delay between emails to avoid rate limiting */
     .send-all-bar {
       padding:1rem 2.5rem;
       display:flex;
@@ -410,7 +409,7 @@
     .btn-send-all.loading .spinner { display:block; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* TOAST */
+    /* toast notifications -appears at bottom, auto-hides after 3 seconds */
     .toast-msg {
       position:fixed;
       bottom:1.5rem;
@@ -556,6 +555,31 @@
     </div>
   </div>
 
+  <!-- Template Selection Section -->
+  <div class="section" id="templateSection">
+    <div class="section-header">
+      <div class="section-number">01.5</div>
+      <div class="section-title">Email Template</div>
+      <div class="section-tagline">Select or manage templates</div>
+    </div>
+    
+    <div class="settings-grid" style="grid-template-columns: 1fr auto; gap: 1rem;">
+      <div class="field-group">
+        <label class="field-label">Choose Template</label>
+        <div class="field-wrap">
+          <select id="templateSelect" style="width:100%; padding: 0.65rem 1rem; border-radius: 0.75rem; border: 1.5px solid #e2ddd4;">
+            <option value="">Loading templates...</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group" style="justify-content: flex-end;">
+        <button class="btn-process" id="editTemplateBtn" style="background:#1e2f2b; color:#fae669; padding:0.65rem 1.5rem; margin:0;">
+          Manage Templates
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── SECTION 2: UPLOAD & CONFIG ── -->
   <div class="section" id="uploadSection">
     <div class="section-header">
@@ -646,9 +670,9 @@
 <div id="globalToast" class="toast-msg"></div>
 
 <script>
-//  STATE
-let masterWb = null;       // parsed XLSX workbook
-let ascList = [];          // array of ASC objects built during process
+// My state variables -add anything new here
+let masterWb = null;
+let ascList = [];
 let isSending = false;
 
 // Restore session SMTP
@@ -676,7 +700,7 @@ document.getElementById('toggleSmtpPw').addEventListener('click', function() {
 const today = new Date();
 document.getElementById('mailDate').value = today.toISOString().slice(0,10);
 
-//  HELPERS
+// helper functions -most are for formatting Excel data
 function showToast(msg, isErr=false) {
   const t = document.getElementById('globalToast');
   t.textContent = msg;
@@ -686,7 +710,6 @@ function showToast(msg, isErr=false) {
 }
 
 function fmtDate(dateStr) {
-  // "2026-04-09"  →  "09-Apr-2026"
   const d = new Date(dateStr + 'T00:00:00');
   const dd = String(d.getDate()).padStart(2,'0');
   const mon = d.toLocaleString('en-GB',{month:'short'});
@@ -700,6 +723,7 @@ function addDays(dateStr, n) {
 }
 
 function cleanNum(v) {
+  // handles weird excel formatting with rupee symbols
   const n = parseFloat(String(v||'').replace(/[₹,\s]/g,''));
   return isNaN(n) ? 0 : n;
 }
@@ -710,7 +734,7 @@ function formatVal(v) {
   return v.toLocaleString('en-IN');
 }
 
-//  FILE UPLOAD / DRAG DROP
+// drag & drop handler, because bored of clicking to upload button again and again while testing.
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('stockFileInput');
 
@@ -762,7 +786,7 @@ function checkProcessEnabled() {
   document.getElementById(id).addEventListener('input', checkProcessEnabled);
 });
 
-//  PROCESS FILE → BUILD ASC LIST
+// main logic: reads 3 sheets, creates individual Excel files per ASC
 document.getElementById('processBtn').addEventListener('click', processFile);
 
 function sheetToRows(wb, sheetName) {
@@ -827,7 +851,6 @@ function processFile() {
       return out;
     }
 
-    // Helper: filter a styled sheet keeping only header row + rows where keyColIdx matches matchSet
     // Dest sheet always starts at A1 (col 0, row 0) regardless of source sheet origin
     function filterStyledSheet(masterWs, matchSet, keyColIdx) {
       if (!masterWs) return XLSX.utils.aoa_to_sheet([[]]);
@@ -839,7 +862,7 @@ function processFile() {
       let destRow = 0;
 
       // Collect: header row + matching data rows (src row indices)
-      const rowsToCopy = [range.s.r]; // header
+      const rowsToCopy = [range.s.r];
       for (let R = range.s.r + 1; R <= range.e.r; R++) {
         const keyCell = masterWs[XLSX.utils.encode_cell({ r: R, c: range.s.c + keyColIdx })];
         const val = keyCell ? String(keyCell.v || '').trim() : '';
@@ -858,7 +881,13 @@ function processFile() {
 
       if (destRow === 0) return XLSX.utils.aoa_to_sheet([[]]);
       out['!ref'] = XLSX.utils.encode_range({ s:{ r:0, c:0 }, e:{ r:destRow-1, c:numCols-1 } });
-      if (masterWs['!cols']) out['!cols'] = JSON.parse(JSON.stringify(masterWs['!cols']));
+      if (masterWs['!cols']) {
+        const cleanedCols = JSON.parse(JSON.stringify(masterWs['!cols']));
+        cleanedCols.forEach(col => {
+          if (col && col.hidden !== undefined) delete col.hidden;
+        });
+        out['!cols'] = cleanedCols;
+      }
       if (masterWs['!rows']) out['!rows'] = JSON.parse(JSON.stringify(masterWs['!rows']));
       return out;
     }
@@ -985,7 +1014,7 @@ function processFile() {
   renderPreview();
 }
 
-//  RENDER PREVIEW TABLE
+//  builds the preview table and summary cards, shows the preview section
 function renderPreview() {
   const total    = ascList.length;
   const warns    = ascList.filter(a => a.isZeroStock).length;
@@ -1066,7 +1095,7 @@ function refreshRow(idx) {
   row.outerHTML = buildRow(asc);
 }
 
-//  PREVIEW MAIL BODY (modal-lite)
+// opens mail preview in new window with basic HTML formatting
 function previewMail(idx) {
   const asc = ascList[idx];
   const htmlBody = buildMailBodyHtml(asc);
@@ -1083,7 +1112,7 @@ function previewMail(idx) {
     <div class="header">
       <strong>To:</strong> ${asc.toEmail} &nbsp;|&nbsp;
       <strong>CC:</strong> ${asc.ccEmails.join(', ')||'—'} &nbsp;|&nbsp;
-      <strong>Subject:</strong> Urgent: Dispatch of Pending Stock to RV Warehouse | ${asc.ascName} &nbsp;|&nbsp;
+      <strong>Subject:</strong> ${buildMailSubject(asc)} &nbsp;|&nbsp;
       <strong>Attachment:</strong> ${asc.attachName}
     </div>
     <div class="mail-body">${htmlBody}</div>
@@ -1091,13 +1120,27 @@ function previewMail(idx) {
 }
 
 function buildMailBodyText(asc) {
+  if (currentTemplate && currentTemplate.textBodyTemplate) {
+    let text = currentTemplate.textBodyTemplate;
+    text = text.replace(/\{\{ascName\}\}/g, asc.ascName);
+    text = text.replace(/\{\{mailDate\}\}/g, asc.mailDate);
+    text = text.replace(/\{\{deadlineDate\}\}/g, asc.deadlineDate);
+    text = text.replace(/\{\{stkQty\}\}/g, asc.stkQty);
+    text = text.replace(/\{\{stnQty\}\}/g, asc.stnQty);
+    text = text.replace(/\{\{totalVal\}\}/g, formatVal(asc.totalVal));
+    text = text.replace(/\{\{asm\}\}/g, asc.asm || '');
+    text = text.replace(/\{\{toEmail\}\}/g, asc.toEmail);
+    return text;
+  }
+
+  // Fallback text version
   return `Dear ${asc.ascName},
 
 We hope you are doing well.
 
 This is a gentle reminder to review your available stock (as per attached sheet) and arrange the dispatch of all pending items to the RV Warehouse by ${asc.mailDate}. We kindly request that all materials are sent in complete and good condition to avoid any issues upon receipt.
 
-In case we do not receive the complete stock by ${asc.deadlineDate}, or if it is received incomplete or not in proper condition, we may have to assume that the stock has not been dispatched. Accordingly, such pending stock may be treated as penalty accepted at your end, and further billing may be processed for the same.
+In case we do not receive the complete stock by ${asc.deadlineDate}, or if it is received incomplete or not in proper condition, we may have to assume that the stock has not been dispatched. Accordingly, such pending stock may be treated as penalty accepted, as per the final stock value (including tax) at your end, and further billing may be processed for the same.
 
 We truly appreciate your cooperation and support in ensuring the timely and smooth handling of this matter.
 
@@ -1114,6 +1157,22 @@ This communication is confidential and intended solely for the named recipient(s
 }
 
 function buildMailBodyHtml(asc) {
+  if (currentTemplate && currentTemplate.htmlBodyTemplate) {
+    // Replace variables in template
+    let html = currentTemplate.htmlBodyTemplate;
+    html = html.replace(/\{\{ascName\}\}/g, asc.ascName);
+    html = html.replace(/\{\{mailDate\}\}/g, asc.mailDate);
+    html = html.replace(/\{\{deadlineDate\}\}/g, asc.deadlineDate);
+    html = html.replace(/\{\{summaryTableHtml\}\}/g, asc.summaryTableHtml || '');
+    html = html.replace(/\{\{stkQty\}\}/g, asc.stkQty);
+    html = html.replace(/\{\{stnQty\}\}/g, asc.stnQty);
+    html = html.replace(/\{\{totalVal\}\}/g, formatVal(asc.totalVal));
+    html = html.replace(/\{\{asm\}\}/g, asc.asm || '');
+    html = html.replace(/\{\{toEmail\}\}/g, asc.toEmail);
+    return html;
+  }
+
+  // Fallback to default template (original hardcoded version)
   const p = (t) => `<p style="margin:0 0 14px 0;font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b;line-height:1.65">${t}</p>`;
   return `
 <div style="font-family:Arial,sans-serif;font-size:14px;color:#1a1e2b;width:100%">
@@ -1142,7 +1201,7 @@ function buildMailBody(asc) {
   return buildMailBodyText(asc);
 }
 
-//  SKIP / SEND SINGLE
+// individual row actions: skip for zero-stock ASCs, send for ready ones
 function skipAsc(idx) {
   ascList[idx].skipped = true;
   ascList[idx].status = 'skipped';
@@ -1163,7 +1222,7 @@ async function sendSingle(idx) {
   updateSendBar();
 }
 
-//  SEND ALL
+//  bulk send with progress bar update and small delay between sends to avoid overwhelming SMTP server
 document.getElementById('sendAllBtn').addEventListener('click', async () => {
   if (isSending) return;
   isSending = true;
@@ -1191,7 +1250,7 @@ document.getElementById('sendAllBtn').addEventListener('click', async () => {
   showToast(`Done — ${sentCount} sent, ${errCount} errors`, errCount > 0);
 });
 
-//  DISPATCH MAIL — calls /api/send-asc-mail
+//  api call to backend to send mail via SMTP (credentials entered by user in form)
 async function dispatchMail(asc) {
   const smtp = {
     host:      document.getElementById('smtpHost').value.trim(),
@@ -1207,7 +1266,7 @@ async function dispatchMail(asc) {
     smtp,
     to:      asc.toEmail,
     cc:      asc.ccEmails,
-    subject: `Urgent: Dispatch of Pending Stock to RV Warehouse | ${asc.ascName} |`,
+    subject: buildMailSubject(asc), // Use dynamic subject
     body:    buildMailBodyText(asc),
     htmlBody: buildMailBodyHtml(asc),
     attachName:   asc.attachName,
@@ -1223,7 +1282,7 @@ async function dispatchMail(asc) {
     const data = await res.json();
     if (res.ok && data.ok) return true;
     const errMsg = data.error || `HTTP ${res.status}`;
-    console.error('[dispatchMail] 400/500 detail:', errMsg, '| ASC:', asc.ascName, '| toEmail:', asc.toEmail, '| attachBase64 length:', asc.attachBase64?.length);
+    console.error('[dispatchMail] Error:', errMsg);
     showToast(`${asc.ascName}: ${errMsg}`, true);
     return false;
   } catch(e) {
@@ -1232,7 +1291,7 @@ async function dispatchMail(asc) {
   }
 }
 
-//  SEND PROGRESS BAR
+//  updates the progress bar and label in the send-all section based on current ascList status
 function updateSendBar() {
   const total   = ascList.length;
   const sent    = ascList.filter(a => a.status === 'sent').length;
@@ -1245,7 +1304,147 @@ function updateSendBar() {
     `${sent} sent · ${skipped} skipped · ${errors} errors · ${total - done} remaining`;
 }
 
-//  RESET
+// template management
+// Template management functions
+let currentTemplate = null;
+
+async function loadTemplatesForSelector() {
+  try {
+    const res = await fetch('/api/templates');
+    const templates = await res.json();
+    const select = document.getElementById('templateSelect');
+    
+    if (!select) return;
+    
+    if (templates.length === 0) {
+      select.innerHTML = '<option value="">No templates found. Create one first.</option>';
+      return;
+    }
+    
+    select.innerHTML = '<option value="">-- Select template (default will be used) --</option>' +
+      templates.map(tpl => `<option value="${tpl.id}" ${tpl.isDefault ? 'selected' : ''}>${tpl.name} ${tpl.isDefault ? '(Default)' : ''}</option>`).join('');
+    
+    // Load default template
+    const defaultTpl = templates.find(t => t.isDefault);
+    if (defaultTpl) {
+      currentTemplate = defaultTpl;
+    }
+    
+    select.addEventListener('change', async (e) => {
+      if (e.target.value) {
+        const res = await fetch(`/api/templates?id=${e.target.value}`);
+        currentTemplate = await res.json();
+      } else {
+        currentTemplate = null;
+      }
+    });
+  } catch (err) {
+    console.error('Failed to load templates:', err);
+  }
+}
+
+// Override mail building functions to use templates
+const originalBuildMailBodyHtml = window.buildMailBodyHtml;
+const originalBuildMailBodyText = window.buildMailBodyText;
+
+window.buildMailBodyHtml = function(asc) {
+  if (currentTemplate && currentTemplate.htmlBodyTemplate) {
+    let html = currentTemplate.htmlBodyTemplate;
+    html = html.replace(/\{\{ascName\}\}/g, asc.ascName);
+    html = html.replace(/\{\{mailDate\}\}/g, asc.mailDate);
+    html = html.replace(/\{\{deadlineDate\}\}/g, asc.deadlineDate);
+    html = html.replace(/\{\{summaryTableHtml\}\}/g, asc.summaryTableHtml || '');
+    html = html.replace(/\{\{stkQty\}\}/g, asc.stkQty);
+    html = html.replace(/\{\{stnQty\}\}/g, asc.stnQty);
+    html = html.replace(/\{\{totalVal\}\}/g, formatVal(asc.totalVal));
+    html = html.replace(/\{\{asm\}\}/g, asc.asm || '');
+    html = html.replace(/\{\{toEmail\}\}/g, asc.toEmail);
+    return html;
+  }
+  return originalBuildMailBodyHtml ? originalBuildMailBodyHtml(asc) : buildMailBodyHtml(asc);
+};
+
+window.buildMailBodyText = function(asc) {
+  if (currentTemplate && currentTemplate.textBodyTemplate) {
+    let text = currentTemplate.textBodyTemplate;
+    text = text.replace(/\{\{ascName\}\}/g, asc.ascName);
+    text = text.replace(/\{\{mailDate\}\}/g, asc.mailDate);
+    text = text.replace(/\{\{deadlineDate\}\}/g, asc.deadlineDate);
+    text = text.replace(/\{\{stkQty\}\}/g, asc.stkQty);
+    text = text.replace(/\{\{stnQty\}\}/g, asc.stnQty);
+    text = text.replace(/\{\{totalVal\}\}/g, formatVal(asc.totalVal));
+    text = text.replace(/\{\{asm\}\}/g, asc.asm || '');
+    text = text.replace(/\{\{toEmail\}\}/g, asc.toEmail);
+    return text;
+  }
+  return originalBuildMailBodyText ? originalBuildMailBodyText(asc) : buildMailBodyText(asc);
+};
+
+window.buildMailSubject = function(asc) {
+  if (currentTemplate && currentTemplate.subjectTemplate) {
+    let subject = currentTemplate.subjectTemplate;
+    subject = subject.replace(/\{\{ascName\}\}/g, asc.ascName);
+    subject = subject.replace(/\{\{mailDate\}\}/g, asc.mailDate);
+    subject = subject.replace(/\{\{deadlineDate\}\}/g, asc.deadlineDate);
+    return subject;
+  }
+  return `Urgent: Dispatch of Pending Stock to RV Warehouse | ${asc.ascName} |`;
+};
+
+// Update dispatchMail to use new subject builder
+const originalDispatchMail = window.dispatchMail;
+window.dispatchMail = async function(asc) {
+  const smtp = {
+    host:      document.getElementById('smtpHost').value.trim(),
+    port:      parseInt(document.getElementById('smtpPort').value) || 465,
+    security:  document.getElementById('smtpSecurity').value,
+    fromName:  document.getElementById('smtpFromName').value.trim() || 'Central Warehouse Team',
+    fromEmail: document.getElementById('smtpFromEmail').value.trim(),
+    user:      document.getElementById('smtpUser').value.trim(),
+    pass:      document.getElementById('smtpPass').value
+  };
+
+  const payload = {
+    smtp,
+    to:      asc.toEmail,
+    cc:      asc.ccEmails,
+    subject: window.buildMailSubject(asc),
+    body:    window.buildMailBodyText(asc),
+    htmlBody: window.buildMailBodyHtml(asc),
+    attachName:   asc.attachName,
+    attachBase64: asc.attachBase64
+  };
+
+  try {
+    const res = await fetch('/api/send-asc-mail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) return true;
+    const errMsg = data.error || `HTTP ${res.status}`;
+    console.error('[dispatchMail] Error:', errMsg);
+    showToast(`${asc.ascName}: ${errMsg}`, true);
+    return false;
+  } catch(e) {
+    showToast(`${asc.ascName}: Network error`, true);
+    return false;
+  }
+};
+
+// Replace the original dispatchMail function
+window.dispatchMail = window.dispatchMail;
+
+// Add event listener for edit template button
+document.getElementById('editTemplateBtn')?.addEventListener('click', () => {
+  window.location.href = '/template-editor';
+});
+
+// Load templates when page loads
+loadTemplatesForSelector();
+
+//  clear everything and reset to initial state to allow new file upload and processing
 document.getElementById('resetBtn').addEventListener('click', () => {
   masterWb = null;
   ascList = [];
