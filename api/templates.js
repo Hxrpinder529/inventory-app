@@ -31,9 +31,86 @@ if (!existsSync(TEMPLATES_FILE)) {
   <p style="margin:16px 0 4px 0;">Thanks,</p>
   <p style="margin:0 0 4px 0;"><strong>Central Warehouse Team</strong></p>
   <p style="margin:0 0 20px 0;">RV Solutions</p>
+  
+  <div style="margin: 20px 0 16px 0; padding: 12px; background: #fef5e7; border-left: 4px solid #e5b13b; border-radius: 4px;">
+    <p style="margin: 0 0 8px 0; font-weight: bold;">For any queries, please contact our team:</p>
+  </div>
+  
+  <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-family: Arial, sans-serif; font-size: 13px;">
+    <thead>
+      <tr style="background: #1e2f2b; color: #fae669;">
+        <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Name</th>
+        <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Related to Contact</th>
+        <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Contact No</th>
+        <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Email</th>
+       </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Anand Sarkar</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">WH Manager + Reverse Logistics + Docket Arrange</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">7061410672</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">ananda.sarkar@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Amit Kashyap</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Forward + Good Stock + Reverse Logistics</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">9548631092</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">amit.kashyap@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Zabir</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Complete Reverse Logistics</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">7011539585</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">zabir.beg@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Virender Shah</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Call Login- CRM Issue + New ASC On-boarding</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">9999422774</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">virender.shah@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Dev Raj Singh</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Boat + EVM + Matrix</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">7302788492</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">devraj.singh@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Keerti Prakash</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Lenovo + Ptron + Matrix</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">8595140575</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">keertip.maurya@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Priyanka</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Acwo + Pebble + Mobilla</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">8860441600</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">priyanka06@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Hema Negi</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Phillips (TPV)</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">8800813144</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">hema.negi@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Anandi</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">South ASCs Support</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">7838924528</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">anandhavalli@rvsolutions.in</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><strong>Manoj</strong></td>
+        <td style="border: 1px solid #ddd; padding: 8px;">Technical Support + Training</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">9818814250</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">manoj.kumar10@gmail.com</td>
+      </tr>
+    </tbody>
+  </table>
+  
   <div style="margin-top:20px;padding:10px 14px;background:#f4f2ec;border-radius:4px;font-size:11px;color:#6b7c70;">
     This is an automated system-generated mail. Please do not reply to this message.<br>
-    For any queries, please contact your designated RV Solutions representative.<br>
     This communication is confidential and intended solely for the named recipient(s).
   </div>
 </div>`,
@@ -53,9 +130,22 @@ Thanks,
 Central Warehouse Team
 RV Solutions
 
+For any queries, please contact our team:
+
+Name - Related to Contact - Contact No - Email
+Anand Sarkar - WH Manager + Reverse Logistics + Docket Arrange - 7061410672 - ananda.sarkar@rvsolutions.in
+Amit Kashyap - Forward + Good Stock + Reverse Logistics - 9548631092 - amit.kashyap@rvsolutions.in
+Zabir - Complete Reverse Logistics - 7011539585 - zabir.beg@rvsolutions.in
+Virender Shah - Call Login- CRM Issue + New ASC On-boarding - 9999422774 - virender.shah@rvsolutions.in
+Dev Raj Singh - Boat + EVM + Matrix - 7302788492 - devraj.singh@rvsolutions.in
+Keerti Prakash - Lenovo + Ptron + Matrix - 8595140575 - keertip.maurya@rvsolutions.in
+Priyanka - Acwo + Pebble + Mobilla - 8860441600 - priyanka06@rvsolutions.in
+Hema Negi - Phillips (TPV) - 8800813144 - hema.negi@rvsolutions.in
+Anandi - South ASCs Support - 7838924528 - anandhavalli@rvsolutions.in
+Manoj - Technical Support + Training - 9818814250 - manoj.kumar10@gmail.com
+
 ---
 This is an automated system-generated mail. Please do not reply to this message.
-For any queries, please contact your designated RV Solutions representative.
 This communication is confidential and intended solely for the named recipient(s).`,
       isDefault: true,
       createdAt: new Date().toISOString(),

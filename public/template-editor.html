@@ -569,7 +569,7 @@ function toggleTablePicker(e) {
 
 document.addEventListener('click', () => picker.classList.remove('show'));
 
-// INSERT TABLE
+// insert table
 function insertTable(rows, cols) {
   restoreSelection();
   editor.focus();
@@ -596,7 +596,7 @@ function insertTable(rows, cols) {
   showToast(`${rows}×${cols} table inserted — right-click to add/remove rows & columns`);
 }
 
-// TABLE CONTEXT MENU (right-click on table cell)
+// table context menu (right-click)
 const ctxMenu = document.getElementById('ctxMenu');
 
 editor.addEventListener('contextmenu', e => {
