@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Template Editor | RV Solutions</title>
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/quill-better-table@1.2.4/dist/quill-better-table.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -129,7 +130,7 @@
       background: #fefcf8;
       border-bottom: 1px solid #e9e6df;
       display: flex;
-      gap: 0.75rem;
+      gap: 1rem;
       flex-wrap: wrap;
       align-items: center;
     }
@@ -146,22 +147,18 @@
       background: #e5b13b;
       color: #1a1e2b;
     }
-    .table-tool-btn {
-      background: #e5b13b;
-      color: #1a1e2b;
-      padding: 0.4rem 0.8rem;
+    .btn-insert-table {
+      background: #1e2f2b;
+      color: #fae669;
+      border: none;
+      padding: 0.4rem 0.9rem;
       border-radius: 20px;
       font-size: 0.75rem;
       font-family: 'JetBrains Mono', monospace;
       cursor: pointer;
       transition: background 0.15s;
-      border: none;
-      font-weight: 600;
     }
-    .table-tool-btn:hover {
-      background: #0059ff;
-      color: white;
-    }
+    .btn-insert-table:hover { background: #0059ff; color: #fff; }
     .editor-form {
       flex: 1;
       overflow-y: auto;
@@ -199,20 +196,6 @@
     #htmlEditor {
       height: 350px;
       margin-bottom: 1rem;
-    }
-    /* Make tables look nice in the editor */
-    .ql-editor table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 16px 0;
-    }
-    .ql-editor th, .ql-editor td {
-      border: 1px solid #ddd;
-      padding: 8px;
-    }
-    .ql-editor th {
-      background: #1e2f2b;
-      color: #fae669;
     }
     .editor-actions {
       display: flex;
@@ -269,6 +252,9 @@
       pointer-events: none;
     }
     .toast-msg.show { opacity: 1; }
+
+    /* quill-better-table context menu z-index fix */
+    .quill-better-table-wrapper { z-index: 100; }
   </style>
 </head>
 <body>
@@ -288,7 +274,7 @@
     
     <div class="editor-area">
       <div class="editor-toolbar">
-        <span style="font-size:0.75rem;font-weight:600;">Variables:</span>
+        <span style="font-size:0.75rem;font-weight:600;margin-right:0.5rem;">Variables:</span>
         <div class="variable-badge" onclick="insertVariable('{{ascName}}')">{{ascName}}</div>
         <div class="variable-badge" onclick="insertVariable('{{mailDate}}')">{{mailDate}}</div>
         <div class="variable-badge" onclick="insertVariable('{{deadlineDate}}')">{{deadlineDate}}</div>
@@ -298,9 +284,7 @@
         <div class="variable-badge" onclick="insertVariable('{{totalVal}}')">{{totalVal}}</div>
         <div class="variable-badge" onclick="insertVariable('{{asm}}')">{{asm}}</div>
         <div class="variable-badge" onclick="insertVariable('{{toEmail}}')">{{toEmail}}</div>
-        <span style="border-left:1px solid #ddd; margin:0 0.25rem;"></span>
-        <button class="table-tool-btn" onclick="insertSimpleTable()">Insert Stock Table</button>
-        <button class="table-tool-btn" onclick="insertProductTable()">Insert Product Table</button>
+        <button class="btn-insert-table" onclick="insertTable()">＋ Insert Table</button>
       </div>
       
       <div class="editor-form">
@@ -326,49 +310,78 @@
         </div>
         
         <div class="editor-actions">
-          <button class="btn-save" onclick="saveTemplate()">Save Template</button>
-          <button class="btn-preview" onclick="previewTemplate()">Preview</button>
+          <button class="btn-save" onclick="saveTemplate()">💾 Save Template</button>
+          <button class="btn-preview" onclick="previewTemplate()">👁 Preview</button>
           <button class="btn-delete" id="deleteBtn" onclick="deleteTemplate()" style="display:none;">🗑 Delete</button>
         </div>
       </div>
       
       <div class="variables-info">
-        <strong>Available variables:</strong> {{ascName}}, {{mailDate}}, {{deadlineDate}}, {{summaryTableHtml}}, {{stkQty}}, {{stnQty}}, {{totalVal}}, {{asm}}, {{toEmail}}
-        <br>Use these variables in your template - they will be replaced with actual data when sending emails.
-        <br><strong>To add a table:</strong> Click the "Insert Stock Table" or "Insert Product Table" buttons above.
+        💡 <strong>Available variables:</strong> {{ascName}}, {{mailDate}}, {{deadlineDate}}, {{summaryTableHtml}}, {{stkQty}}, {{stnQty}}, {{totalVal}}, {{asm}}, {{toEmail}}
+        <br>📝 Use these variables in your template - they will be replaced with actual data when sending emails.
+        <br>📊 <strong>To add a table:</strong> Click <strong>"＋ Insert Table"</strong> button above, then right-click the table to add/remove rows & columns.
       </div>
     </div>
   </div>
 </div>
 <div id="globalToast" class="toast-msg"></div>
 
+<!-- Load Quill first, then quill-better-table -->
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill-better-table@1.2.4/dist/quill-better-table.js"></script>
 
 <script>
   let quill;
   let currentTemplateId = null;
   let templates = [];
-  
-  // Initialize Quill editor
+
+  // Register quill-better-table BEFORE creating the Quill instance
+  Quill.register({ 'modules/better-table': quillBetterTable.default }, true);
+
+  // Override the built-in table module to avoid conflicts
+  const TableModule = Quill.import('modules/table');
+  if (TableModule) Quill.register('modules/table', class {}, true);
+
   quill = new Quill('#htmlEditor', {
     theme: 'snow',
-    placeholder: 'Write your email template here... Use the toolbar above to format text, add lists, and more! Click the table buttons to insert pre-formatted tables.',
+    placeholder: 'Write your email template here...',
     modules: {
       toolbar: [
         ['bold', 'italic', 'underline', 'strike'],
         ['blockquote', 'code-block'],
         [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        [{ 'script': 'sub'}, { 'script': 'super' }],
-        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'script': 'sub' }, { 'script': 'super' }],
+        [{ 'indent': '-1' }, { 'indent': '+1' }],
         [{ 'color': [] }, { 'background': [] }],
         [{ 'align': [] }],
-        ['clean'],
-        ['link']
-      ]
+        ['link'],
+        ['clean']
+        // Note: no 'table' button here — we use the custom "Insert Table" button instead
+      ],
+      'better-table': {
+        operationMenu: {
+          items: {
+            unmergeCells: { text: 'Unmerge Cells' }
+          }
+        }
+      },
+      keyboard: {
+        bindings: quillBetterTable.default.keyboardBindings
+      }
     }
   });
-  
+
+  // Insert a 3×3 table at current cursor position
+  function insertTable() {
+    const tableModule = quill.getModule('better-table');
+    if (tableModule) {
+      tableModule.insertTable(3, 3);
+    } else {
+      showToast('Table module not ready', true);
+    }
+  }
+
   function showToast(msg, isErr = false) {
     const toast = document.getElementById('globalToast');
     toast.textContent = msg;
@@ -376,93 +389,7 @@
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
   }
-  
-  // Insert a simple stock summary table
-  function insertSimpleTable() {
-    const tableHtml = `
-      <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-family: Arial, sans-serif;">
-        <thead>
-          <tr style="background: #1e2f2b; color: #fae669;">
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Description</th>
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Quantity</th>
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Value (₹)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="border: 1px solid #ddd; padding: 8px;">Total Stock Quantity</td>
-            <td style="border: 1px solid #ddd; padding: 8px;"><strong>{{stkQty}}</strong></td>
-            <td style="border: 1px solid #ddd; padding: 8px;">-</td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #ddd; padding: 8px;">STN Quantity</td>
-            <td style="border: 1px solid #ddd; padding: 8px;"><strong>{{stnQty}}</strong></td>
-            <td style="border: 1px solid #ddd; padding: 8px;">-</td>
-          </tr>
-          <tr style="background: #fef5e7;">
-            <td style="border: 1px solid #ddd; padding: 8px;"><strong>Total Value</strong></td>
-            <td style="border: 1px solid #ddd; padding: 8px;">-</td>
-            <td style="border: 1px solid #ddd; padding: 8px;"><strong>₹{{totalVal}}</strong></td>
-          </tr>
-        </tbody>
-      </table>
-    `;
-    
-    const range = quill.getSelection();
-    if (range) {
-      quill.insertText(range.index, tableHtml);
-    } else {
-      quill.insertText(quill.getLength(), '\n' + tableHtml + '\n');
-    }
-    showToast('Stock table inserted! You can edit the values in the editor.');
-  }
-  
-  // Insert a detailed product table
-  function insertProductTable() {
-    const tableHtml = `
-      <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-family: Arial, sans-serif;">
-        <thead>
-          <tr style="background: #1e2f2b; color: #fae669;">
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Product Code</th>
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Product Description</th>
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Quantity</th>
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Unit Price</th>
-            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Total Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-            <td style="border: 1px solid #ddd; padding: 8px;">&nbsp;</td>
-          </tr>
-          <tr style="background: #fef5e7;">
-            <td style="border: 1px solid #ddd; padding: 8px;" colspan="3"><strong>TOTAL</strong></td>
-            <td style="border: 1px solid #ddd; padding: 8px;">-</td>
-            <td style="border: 1px solid #ddd; padding: 8px;"><strong>₹{{totalVal}}</strong></td>
-          </tr>
-        </tbody>
-      </table>
-    `;
-    
-    const range = quill.getSelection();
-    if (range) {
-      quill.insertText(range.index, tableHtml);
-    } else {
-      quill.insertText(quill.getLength(), '\n' + tableHtml + '\n');
-    }
-    showToast('Product table inserted! Click on cells to edit the content.');
-  }
-  
+
   async function loadTemplates() {
     try {
       const res = await fetch('/api/templates');
@@ -473,16 +400,14 @@
       showToast('Failed to load templates', true);
     }
   }
-  
+
   function renderTemplateList() {
     const container = document.getElementById('templateList');
     if (!container) return;
-    
     if (templates.length === 0) {
       container.innerHTML = '<div style="padding:1rem;text-align:center;color:#8c9a91;">No templates yet. Click "New Template" to create one.</div>';
       return;
     }
-    
     container.innerHTML = templates.map(tpl => `
       <div class="template-item ${currentTemplateId === tpl.id ? 'active' : ''}" onclick="loadTemplate('${tpl.id}')">
         <div class="template-name">
@@ -493,13 +418,13 @@
       </div>
     `).join('');
   }
-  
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
-  
+
   async function loadTemplate(id) {
     try {
       const res = await fetch(`/api/templates?id=${id}`);
@@ -514,93 +439,61 @@
       renderTemplateList();
       showToast(`Loaded template: ${tpl.name}`);
     } catch (err) {
-      console.error('Failed to load template:', err);
       showToast('Failed to load template', true);
     }
   }
-  
+
   function insertVariable(variable) {
-    const range = quill.getSelection();
-    if (range) {
-      quill.insertText(range.index, variable);
-      quill.setSelection(range.index + variable.length, 0);
-    } else {
-      quill.insertText(quill.getLength(), variable);
-    }
+    const range = quill.getSelection(true);
+    quill.insertText(range ? range.index : quill.getLength(), variable);
+    if (range) quill.setSelection(range.index + variable.length, 0);
   }
-  
+
   async function saveTemplate() {
     const name = document.getElementById('templateName').value.trim();
     const subjectTemplate = document.getElementById('subjectTemplate').value.trim();
     const htmlBodyTemplate = quill.root.innerHTML;
     const isDefault = document.getElementById('isDefault').checked;
-    
-    if (!name) {
-      showToast('Please enter a template name', true);
-      return;
-    }
-    if (!subjectTemplate) {
-      showToast('Please enter a subject template', true);
-      return;
-    }
-    if (!htmlBodyTemplate || htmlBodyTemplate === '<p><br></p>') {
-      showToast('Please enter email body content', true);
-      return;
-    }
-    
+
+    if (!name) return showToast('Please enter a template name', true);
+    if (!subjectTemplate) return showToast('Please enter a subject template', true);
+    if (!htmlBodyTemplate || htmlBodyTemplate === '<p><br></p>') return showToast('Please enter email body content', true);
+
     const textBodyTemplate = htmlBodyTemplate.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-    
     const payload = { name, subjectTemplate, htmlBodyTemplate, textBodyTemplate, isDefault };
-    
+
     try {
-      let res;
-      if (currentTemplateId) {
-        res = await fetch(`/api/templates?id=${currentTemplateId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } else {
-        res = await fetch('/api/templates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      }
-      
+      const url = currentTemplateId ? `/api/templates?id=${currentTemplateId}` : '/api/templates';
+      const method = currentTemplateId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
       if (res.ok) {
         const saved = await res.json();
-        showToast(currentTemplateId ? 'Template updated!' : 'Template created!');
+        showToast(currentTemplateId ? '✅ Template updated!' : '✅ Template created!');
         await loadTemplates();
-        if (!currentTemplateId) {
-          loadTemplate(saved.id);
-        } else {
-          renderTemplateList();
-        }
+        if (!currentTemplateId) loadTemplate(saved.id);
+        else renderTemplateList();
       } else {
         const err = await res.json();
         showToast(err.error || 'Failed to save template', true);
       }
     } catch (err) {
-      console.error('Save error:', err);
       showToast('Network error', true);
     }
   }
-  
+
   async function deleteTemplate() {
     if (!currentTemplateId) return;
     const template = templates.find(t => t.id === currentTemplateId);
-    if (template?.isDefault) {
-      showToast('Cannot delete the default template', true);
-      return;
-    }
-    if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) return;
-    
+    if (template?.isDefault) return showToast('Cannot delete the default template', true);
+    if (!confirm('Are you sure you want to delete this template?')) return;
+
     try {
-      const res = await fetch(`/api/templates?id=${currentTemplateId}`, {
-        method: 'DELETE'
-      });
-      
+      const res = await fetch(`/api/templates?id=${currentTemplateId}`, { method: 'DELETE' });
       if (res.ok) {
         showToast('🗑 Template deleted');
         currentTemplateId = null;
@@ -615,11 +508,10 @@
         showToast(err.error || 'Failed to delete template', true);
       }
     } catch (err) {
-      console.error('Delete error:', err);
       showToast('Network error', true);
     }
   }
-  
+
   function createNewTemplate() {
     currentTemplateId = null;
     document.getElementById('templateName').value = '';
@@ -628,91 +520,38 @@
     quill.root.innerHTML = '';
     document.getElementById('deleteBtn').style.display = 'none';
     renderTemplateList();
-    showToast('Creating new template...');
+    showToast('📝 Creating new template...');
   }
-  
+
   function previewTemplate() {
     const subject = document.getElementById('subjectTemplate').value;
     const html = quill.root.innerHTML;
-    
     const win = window.open('', '_blank', 'width=900,height=700');
     win.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Template Preview</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 2rem;
-            background: #fefaf0;
-            max-width: 800px;
-            margin: 0 auto;
-          }
-          .preview-header {
-            background: #1e2f2b;
-            color: #fae669;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-          }
-          .preview-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          }
-          .variable-sample {
-            background: #f0f2f5;
-            padding: 0.5rem;
-            margin-top: 1rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            color: #666;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 16px 0;
-          }
-          th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-          }
-          th {
-            background: #1e2f2b;
-            color: #fae669;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="preview-header">
-          <strong>Subject:</strong> ${escapeHtml(subject)}
-        </div>
-        <div class="preview-content">
-          ${html}
-        </div>
-        <div class="variable-sample">
-          <strong>Variables will be replaced with actual data:</strong><br>
-          {{ascName}} → "ABC Service Center"<br>
-          {{mailDate}} → "15-Apr-2026"<br>
-          {{deadlineDate}} → "21-Apr-2026"<br>
-          {{stkQty}} → "150"<br>
-          {{stnQty}} → "25"<br>
-          {{totalVal}} → "15,00,000"
-        </div>
-      </body>
-      </html>
+      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Template Preview</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 2rem; background: #fefaf0; max-width: 800px; margin: 0 auto; }
+        .preview-header { background: #1e2f2b; color: #fae669; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .preview-content { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .variable-sample { background: #f0f2f5; padding: 0.5rem; margin-top: 1rem; border-radius: 4px; font-size: 0.8rem; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #1e2f2b; color: #fae669; }
+      </style></head><body>
+      <div class="preview-header"><strong>Subject:</strong> ${escapeHtml(subject)}</div>
+      <div class="preview-content">${html}</div>
+      <div class="variable-sample">
+        💡 <strong>Variables will be replaced with actual data:</strong><br>
+        {{ascName}} → "ABC Service Center"<br>
+        {{mailDate}} → "15-Apr-2026"<br>
+        {{deadlineDate}} → "21-Apr-2026"<br>
+        {{stkQty}} → "150"<br>
+        {{stnQty}} → "25"<br>
+        {{totalVal}} → "15,00,000"
+      </div></body></html>
     `);
   }
-  
-  // Make functions globally available
-  window.insertSimpleTable = insertSimpleTable;
-  window.insertProductTable = insertProductTable;
-  
-  // Load templates on page load
+
   loadTemplates();
 </script>
 </body>
